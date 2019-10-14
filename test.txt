@@ -1,2 +1,1 @@
-push arguments 1
-
+eq
