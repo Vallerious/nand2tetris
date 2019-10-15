@@ -6,11 +6,14 @@ M=0
 A=A-1
 D=D-M
 @EQ.cmp.x
-D;JEQ
+D;JLT
 @0
-A=M
+A=M-1
 M=0
+@END
+0;JMP
 (EQ.cmp.x)
 @0
-A=M
+A=M-1
 M=-1
+(END)

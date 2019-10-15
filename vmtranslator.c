@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define ONE_COMMAND_CHARS_BUFFER 50
 typedef char* string;
@@ -13,6 +14,7 @@ const string AND_COMMAND = "and";
 const string OR_COMMAND = "or";
 const string NOT_COMMAND = "not";
 const string EQ_COMMAND = "eq";
+const string GT_COMMAND = "gt";
 const string ARGUMENT_MEMORY_SEGMENT = "argument";
 const char ARGUMENT_ADDRESS_LOCATION = '2';
 
@@ -27,6 +29,7 @@ string handle_and_cmd();
 string handle_or_cmd();
 string handle_not_cmd();
 string handle_eq_cmd();
+string handle_gt_cmd();
 
 main()
 {
@@ -109,6 +112,10 @@ void handle_cmd(string command_line, FILE* output_file)
         {
             asm_output = handle_eq_cmd();
         }
+        else if (strcmp(command_token, GT_COMMAND) == 0)
+        {
+            asm_output = handle_gt_cmd();
+        }
 
         int result = fputs(asm_output, output_file);
 
@@ -181,7 +188,14 @@ string handle_not_cmd()
 
 string handle_eq_cmd()
 {
-    string asm_command = malloc(83);
-    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D-M\n@EQ.cmp.x\nD;JEQ\n@0\nA=M\nM=0\n(EQ.cmp.x)\n@0\nA=M\nM=-1\n");
+    string asm_command = malloc(90);
+    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D-M\n@EQ.cmp.x\nD;JEQ\n@0\nA=M-1\nM=0\n@END\n0;JMP\n(EQ.cmp.x)\n@0\nA=M-1\nM=-1\n(END)\n");
+    return asm_command;
+}
+
+string handle_gt_cmd()
+{
+    string asm_command = malloc(90);
+    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D-M\n@EQ.cmp.x\nD;JLT\n@0\nA=M-1\nM=0\n@END\n0;JMP\n(EQ.cmp.x)\n@0\nA=M-1\nM=-1\n(END)\n");
     return asm_command;
 }
