@@ -15,12 +15,14 @@ const string OR_COMMAND = "or";
 const string NOT_COMMAND = "not";
 const string EQ_COMMAND = "eq";
 const string GT_COMMAND = "gt";
+const string LT_COMMAND = "lt";
 const string ARGUMENT_MEMORY_SEGMENT = "argument";
 const char ARGUMENT_ADDRESS_LOCATION = '2';
 
 int counter = 0;
 
 string handle_push_cmd(string memory_register, string offset);
+string handle_const_cmd(string offset);
 string handle_pop_cmd(string memory_register, string offset);
 string handle_add_cmd();
 string handle_sub_cmd();
@@ -28,12 +30,13 @@ string handle_neg_cmd();
 string handle_and_cmd();
 string handle_or_cmd();
 string handle_not_cmd();
-string handle_eq_cmd();
-string handle_gt_cmd();
+string handle_eq_cmd(char offset);
+string handle_gt_cmd(char offset);
+string handle_lt_cmd(char offset);
 
-main()
+main(int argn, char** args)
 {
-    FILE* input_file = fopen("test.txt", "r");
+    FILE* input_file = fopen("StackTest.vm", "r");
     remove("output.asm");
     FILE* output_file = fopen("output.asm", "a+");
 
@@ -76,7 +79,15 @@ void handle_cmd(string command_line, FILE* output_file)
         {
             string memory_segment = strtok(NULL, " ");
             string offset = strtok(NULL, " ");
-            asm_output = handle_push_cmd(memory_segment, offset);
+
+            if (strcmp(memory_segment, "constant") == 0)
+            {
+                asm_output = handle_const_cmd(offset);
+            }
+            else
+            {
+                asm_output = handle_push_cmd(memory_segment, offset);
+            }
         }
         else if (strcmp(command_token, POP_COMMAND) == 0)
         {
@@ -110,11 +121,18 @@ void handle_cmd(string command_line, FILE* output_file)
         }
         else if (strcmp(command_token, EQ_COMMAND) == 0)
         {
-            asm_output = handle_eq_cmd();
+            asm_output = handle_eq_cmd('0' + counter);
+            counter++;
         }
         else if (strcmp(command_token, GT_COMMAND) == 0)
         {
-            asm_output = handle_gt_cmd();
+            asm_output = handle_gt_cmd('0' + counter);
+            counter++;
+        }
+        else if (strcmp(command_token, LT_COMMAND) == 0)
+        {
+            asm_output = handle_lt_cmd('0' + counter);
+            counter++;
         }
 
         int result = fputs(asm_output, output_file);
@@ -167,15 +185,15 @@ string handle_neg_cmd()
 
 string handle_and_cmd()
 {
-    string asm_command = malloc(32);
-    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D&M\n");
+    string asm_command = malloc(42);
+    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D&M\nM=D\n");
     return asm_command;
 }
 
 string handle_or_cmd()
 {
-    string asm_command = malloc(32);
-    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D|M\n");
+    string asm_command = malloc(42);
+    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D|M\nM=D\n");
     return asm_command;
 }
 
@@ -186,16 +204,35 @@ string handle_not_cmd()
     return asm_command;
 }
 
-string handle_eq_cmd()
+string handle_eq_cmd(char offset)
 {
-    string asm_command = malloc(90);
-    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D-M\n@EQ.cmp.x\nD;JEQ\n@0\nA=M-1\nM=0\n@END\n0;JMP\n(EQ.cmp.x)\n@0\nA=M-1\nM=-1\n(END)\n");
+    string asm_command = malloc(110);
+    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D-M\n@EQ.cmp.x\nD;JEQ\n@0\nA=M-1\nM=0\n@END.x\n0;JMP\n(EQ.cmp.x)\n@0\nA=M-1\nM=-1\n(END.x)\n");
+    asm_command[41] = asm_command[67] = asm_command[83] = asm_command[105] = offset;
     return asm_command;
 }
 
-string handle_gt_cmd()
+string handle_gt_cmd(char offset)
 {
-    string asm_command = malloc(90);
-    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D-M\n@EQ.cmp.x\nD;JLT\n@0\nA=M-1\nM=0\n@END\n0;JMP\n(EQ.cmp.x)\n@0\nA=M-1\nM=-1\n(END)\n");
+    string asm_command = malloc(110);
+    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D-M\n@GT.cmp.x\nD;JLT\n@0\nA=M-1\nM=0\n@END.x\n0;JMP\n(GT.cmp.x)\n@0\nA=M-1\nM=-1\n(END.x)\n");
+    asm_command[41] = asm_command[67] = asm_command[83] = asm_command[105] = offset;
+    return asm_command;
+}
+
+string handle_lt_cmd(char offset)
+{
+    string asm_command = malloc(110);
+    strcpy(asm_command, "@0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D-M\n@LT.cmp.x\nD;JGT\n@0\nA=M-1\nM=0\n@END.x\n0;JMP\n(LT.cmp.x)\n@0\nA=M-1\nM=-1\n(END.x)\n");
+    asm_command[41] = asm_command[67] = asm_command[83] = asm_command[105] = offset;
+    return asm_command;
+}
+
+string handle_const_cmd(string offset)
+{
+    string asm_command = malloc(40);
+    strcpy(asm_command, "@");
+    strcat(asm_command, offset);
+    strcat(asm_command, "\nD=A\n@0\nM=M+1\nA=M-1\nM=D\n");
     return asm_command;
 }

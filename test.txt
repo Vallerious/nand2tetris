@@ -1,1 +1,4 @@
-gt
+push constant 17
+push constant 20
+and
+
