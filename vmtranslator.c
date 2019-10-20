@@ -34,9 +34,28 @@ string handle_eq_cmd(char offset);
 string handle_gt_cmd(char offset);
 string handle_lt_cmd(char offset);
 
+string label(string label_name)
+{
+    string label_asm = malloc(20);
+    strcpy(label_asm, "(");
+    strcat(label_asm, label_name);
+    strcat(label_asm, ")\n");
+    return label_asm;
+}
+
+string goto_cmd(string label_name)
+{
+    string goto_asm = malloc(40);
+    strcpy(goto_asm, "@");
+    strcat(goto_asm, label_name);
+    strcat(goto_asm, "\n0;JMP\n");
+
+    return goto_asm;
+}
+
 main(int argn, char** args)
 {
-    FILE* input_file = fopen("StackTest.vm", "r");
+    FILE* input_file = fopen("test.txt", "r");
     remove("output.asm");
     FILE* output_file = fopen("output.asm", "a+");
 
@@ -133,6 +152,16 @@ void handle_cmd(string command_line, FILE* output_file)
         {
             asm_output = handle_lt_cmd('0' + counter);
             counter++;
+        }
+        else if (strcmp(command_token, "label") == 0)
+        {
+            string label_name = strtok(NULL, " ");
+            asm_output = label(label_name);
+        }
+        else if (strcmp(command_token, "goto") == 0)
+        {
+            string label_name = strtok(NULL, " ");
+            asm_output = goto_cmd(label_name);
         }
 
         int result = fputs(asm_output, output_file);
