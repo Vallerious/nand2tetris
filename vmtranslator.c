@@ -53,40 +53,6 @@ string goto_cmd(string label_name)
     return goto_asm;
 }
 
-main(int argn, char** args)
-{
-    FILE* input_file = fopen("test.txt", "r");
-    remove("output.asm");
-    FILE* output_file = fopen("output.asm", "a+");
-
-    parse(input_file, output_file);
-
-    fclose(input_file);
-    fclose(output_file);
-}
-
-void parse(FILE* input_file, FILE* output_file)
-{
-    int c;
-    char line_buffer[ONE_COMMAND_CHARS_BUFFER];
-    char cursor;
-
-    while ((c = getc(input_file)) != EOF)
-    {
-        if ('\n' == (char) c)
-        {
-            line_buffer[cursor++] = '\0';
-            handle_cmd(line_buffer, output_file);
-            memset(line_buffer, '\0', cursor + 1);
-            cursor = 0;
-        }
-        else
-        {
-            line_buffer[cursor++] = (char) c;
-        }
-    }
-}
-
 void handle_cmd(string command_line, FILE* output_file)
 {
     string command_token = strtok(command_line, " ");
@@ -168,11 +134,45 @@ void handle_cmd(string command_line, FILE* output_file)
 
         if (result == EOF)
         {
-            return 2;
+            return;
         }
 
         free(asm_output);
     }
+}
+
+void parse(FILE* input_file, FILE* output_file)
+{
+    int c;
+    char line_buffer[ONE_COMMAND_CHARS_BUFFER];
+    char cursor;
+
+    while ((c = getc(input_file)) != EOF)
+    {
+        if ('\n' == (char) c)
+        {
+            line_buffer[cursor++] = '\0';
+            handle_cmd(line_buffer, output_file);
+            memset(line_buffer, '\0', cursor + 1);
+            cursor = 0;
+        }
+        else
+        {
+            line_buffer[cursor++] = (char) c;
+        }
+    }
+}
+
+int main(int argn, char** args)
+{
+    FILE* input_file = fopen("test.txt", "r");
+    remove("output.asm");
+    FILE* output_file = fopen("output.asm", "a+");
+
+    parse(input_file, output_file);
+
+    fclose(input_file);
+    fclose(output_file);
 }
 
 string handle_push_cmd(string memory_register, string offset)
