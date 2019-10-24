@@ -4,18 +4,18 @@ import com.sun.media.jfxmedia.logging.Logger;
 import constants.CommandType;
 import constants.MemorySegment;
 import contracts.ICodeWriter;
-import translators.ICodeGenerator;
+import translators.HackCodeGenerator;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
 
 public class HackWriter implements ICodeWriter {
     protected BufferedWriter assemblyOutput;
-    protected ICodeGenerator codeGenerator;
+    protected HackCodeGenerator codeGenerator;
 
     private long labelIndex = 0L;
 
-    public HackWriter(BufferedWriter assemblyOutput, ICodeGenerator codeGenerator) {
+    public HackWriter(BufferedWriter assemblyOutput, HackCodeGenerator codeGenerator) {
         this.assemblyOutput = assemblyOutput;
         this.codeGenerator = codeGenerator;
     }
@@ -64,92 +64,103 @@ public class HackWriter implements ICodeWriter {
         if (MemorySegment.CONSTANT.equals(segment)) {
             this.constant(index);
         } else {
-            // "@k\nA=M\nD=M\n@0\nM=M+1\nA=M-1\nM=D\n"
-            this.writeInBufferedWriter("@" + segment.name());
-            this.writeInBufferedWriter(this.codeGenerator.goToAddressByPointerValue());
-            this.writeInBufferedWriter("D=M");
+            this.writeInBufferedWriter(HackCodeGenerator.ACCESSOR + segment.name());
+
+            if (!MemorySegment.R5.equals(segment) && !MemorySegment.R3.equals(segment) && !MemorySegment.STATIC.equals(segment)) { // non-pointer addresses do not need this.
+                this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.MEMORY_REGISTER));
+            }
+
+            this.writeInBufferedWriter(this.codeGenerator.advanceAddressPointer(Integer.parseInt(index)));
+
+            this.writeInBufferedWriter(this.codeGenerator.setDataRegister(HackCodeGenerator.MEMORY_REGISTER));
             this.writeInBufferedWriter(this.codeGenerator.selectStackPointer());
-            this.writeInBufferedWriter("M=M+1");
-            this.writeInBufferedWriter(this.codeGenerator.goToPreviousPointerValue());
-            this.writeInBufferedWriter("M=D");
+            this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.MEMORY_ADD_ONE));
+            this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.MEMORY_SUB_ONE));
+            this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.DATA_REGISTER));
         }
     }
 
-    // "@0\nM=M-1\nA=M\nD=M\n@k\nA=M\nM=D\n"
     @Override
     public void writePop(MemorySegment segment, String index) {
         this.writeInBufferedWriter("// pop");
         this.writeInBufferedWriter(this.codeGenerator.selectStackPointer());
-        this.writeInBufferedWriter("M=M-1");
-        this.writeInBufferedWriter("A=M");
-        this.writeInBufferedWriter("D=M");
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.MEMORY_SUB_ONE));
+        this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.MEMORY_REGISTER));
+        this.writeInBufferedWriter(this.codeGenerator.setDataRegister(HackCodeGenerator.MEMORY_REGISTER));
 
-        if (MemorySegment.TEMP.equals(segment)) {
-            segment = MemorySegment.R5;
+        this.writeInBufferedWriter(HackCodeGenerator.ACCESSOR + segment.name());
+
+        if (!MemorySegment.R5.equals(segment) && !MemorySegment.R3.equals(segment) && !MemorySegment.STATIC.equals(segment)) { // non-pointer addresses do not need this.
+            this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.MEMORY_REGISTER));
         }
 
-        this.writeInBufferedWriter("@" + segment.name());
-        this.writeInBufferedWriter("A=M");
+        this.writeInBufferedWriter(this.codeGenerator.advanceAddressPointer(Integer.parseInt(index)));
 
-        for (int i = 0; i < Integer.parseInt(index); i++) {
-            this.writeInBufferedWriter("A=A+1");
-        }
-
-        this.writeInBufferedWriter("M=D");
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.DATA_REGISTER));
     }
 
-    @Override
-    public void close() {
-        try {
-            this.assemblyOutput.close();
-        } catch (IOException e) {
-            Logger.logMsg(Logger.ERROR, "Could not close writer resource");
-        }
+    public void writeLabel(String labelName) {
+        this.writeInBufferedWriter("// label");
+        this.writeInBufferedWriter("(" + labelName + ")");
+    }
+
+    public void writeGoto(String labelName) {
+        this.writeInBufferedWriter("// goto");
+        this.writeInBufferedWriter(HackCodeGenerator.ACCESSOR + labelName);
+        this.writeInBufferedWriter("0;JMP");
+    }
+
+    public void writeConditionalGoto(String label) {
+        this.writeInBufferedWriter("// if goto");
+        this.writeInBufferedWriter(this.codeGenerator.selectStackPointer());
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.MEMORY_SUB_ONE));
+        this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.MEMORY_REGISTER));
+        this.writeInBufferedWriter(this.codeGenerator.setDataRegister(HackCodeGenerator.MEMORY_REGISTER));
+        this.writeInBufferedWriter(HackCodeGenerator.ACCESSOR + label);
+        this.writeInBufferedWriter("D;JGT");
     }
 
     private void add() {
         this.writeInBufferedWriter("// add");
         this.storeTopStackValueAndPointToNext();
-        this.writeInBufferedWriter(this.codeGenerator.increaseDataRegisterWithMemoryRegister());
-        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegisterToDataRegisterValue());
+        this.writeInBufferedWriter(this.codeGenerator.setDataRegister(HackCodeGenerator.DATA_PLUS_MEMORY_REGISTERS));
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.DATA_REGISTER));
     }
 
     private void sub() {
         this.writeInBufferedWriter("// sub");
         this.storeTopStackValueAndPointToNext();
-        this.writeInBufferedWriter(this.codeGenerator.setDataRegisterToMemoryRegisterMinusDataRegister());
-        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegisterToDataRegisterValue());
+        this.writeInBufferedWriter(this.codeGenerator.setDataRegister(HackCodeGenerator.MEMORY_REGISTER + "-" + HackCodeGenerator.DATA_REGISTER));
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.DATA_REGISTER));
     }
 
     private void neg() {
         this.writeInBufferedWriter("// neg");
         this.writeInBufferedWriter(this.codeGenerator.selectStackPointer());
-        this.writeInBufferedWriter(this.codeGenerator.setDataRegisterToAddressVal());
-        this.writeInBufferedWriter(this.codeGenerator.goToPreviousPointerValue());
-        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegisterToDataRegMinusMemoryReg());
+        this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.MEMORY_SUB_ONE));
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.NEGATE_MEMORY_REGISTER));
     }
 
-    // @0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D&M\nM=D\n
     private void and() {
         this.writeInBufferedWriter("// and");
         this.storeTopStackValueAndPointToNext();
-        this.writeInBufferedWriter(this.codeGenerator.andDataAndMemoryRegs());
-        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegisterToDataRegisterValue());
+        this.writeInBufferedWriter(this.codeGenerator.setDataRegister(HackCodeGenerator.MEMORY_REGISTER + "&" + HackCodeGenerator.DATA_REGISTER));
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.DATA_REGISTER));
     }
 
     private void or() {
         this.writeInBufferedWriter("// or");
         this.storeTopStackValueAndPointToNext();
-        this.writeInBufferedWriter(this.codeGenerator.orDataAndMemoryRegs());
-        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegisterToDataRegisterValue());
+        this.writeInBufferedWriter(this.codeGenerator.setDataRegister(HackCodeGenerator.MEMORY_REGISTER + "|" + HackCodeGenerator.DATA_REGISTER));
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.DATA_REGISTER));
     }
 
     // "@0\nA=M-1\nM=!M\n"
     private void not() {
         this.writeInBufferedWriter("// not");
         this.writeInBufferedWriter(this.codeGenerator.selectStackPointer());
-        this.writeInBufferedWriter(this.codeGenerator.goToPreviousPointerValue());
-        this.writeInBufferedWriter(this.codeGenerator.negateMemoryRegister());
+        this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.MEMORY_SUB_ONE));
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.NOT_MEMORY_REGISTER));
     }
 
     // @0\nM=M-1\nA=M\nD=M\nM=0\nA=A-1\nD=D-M\n@EQ.cmp.x\nD;JEQ\n@0\nA=M-1\nM=0\n@END.x\n0;JMP\n(EQ.cmp.x)\n@0\nA=M-1\nM=-1\n(END.x)\n
@@ -170,39 +181,37 @@ public class HackWriter implements ICodeWriter {
 
     private void constant(String val) {
         this.writeInBufferedWriter("// constant");
-        this.writeInBufferedWriter("@" + val);
-        this.writeInBufferedWriter(this.codeGenerator.setDataRegisterToAddressVal());
+        this.writeInBufferedWriter(HackCodeGenerator.ACCESSOR + val);
+        this.writeInBufferedWriter(this.codeGenerator.setDataRegister(HackCodeGenerator.ADDRESS_REGISTER));
         this.writeInBufferedWriter(this.codeGenerator.selectStackPointer());
-        this.writeInBufferedWriter("M=M+1");
-        this.writeInBufferedWriter(this.codeGenerator.goToPreviousPointerValue());
-        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegisterToDataRegisterValue());
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.MEMORY_ADD_ONE));
+        this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.MEMORY_SUB_ONE));
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.DATA_REGISTER));
     }
 
     private void cmp(String op, String jumpAction) {
         this.storeTopStackValueAndPointToNext();
-        this.writeInBufferedWriter(this.codeGenerator.setDataRegisterToDataRegisterMinusMemoryReg());
-        this.writeInBufferedWriter("@" + op + ".cmp." + this.labelIndex);
-        this.writeInBufferedWriter("D;" + jumpAction);
+        this.writeInBufferedWriter(this.codeGenerator.setDataRegister(HackCodeGenerator.DATA_REGISTER + "-" + HackCodeGenerator.MEMORY_REGISTER));
+        this.writeInBufferedWriter(HackCodeGenerator.ACCESSOR + op + ".cmp." + this.labelIndex);
+        this.writeInBufferedWriter(HackCodeGenerator.DATA_REGISTER + ";" + jumpAction);
         this.writeInBufferedWriter(this.codeGenerator.selectStackPointer());
-        this.writeInBufferedWriter(this.codeGenerator.goToPreviousPointerValue());
-        this.writeInBufferedWriter(this.codeGenerator.clearMemoryRegister());
-        this.writeInBufferedWriter("@END." + this.labelIndex);
+        this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.MEMORY_SUB_ONE));
+        this.writeInBufferedWriter(HackCodeGenerator.ACCESSOR + "END." + this.labelIndex);
         this.writeInBufferedWriter("0;JMP");
         this.writeInBufferedWriter("(" + op + ".cmp." + this.labelIndex + ")");
         this.writeInBufferedWriter(this.codeGenerator.selectStackPointer());
-        this.writeInBufferedWriter(this.codeGenerator.goToPreviousPointerValue());
-        this.writeInBufferedWriter(this.codeGenerator.setMemoryToTrue());
+        this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.MEMORY_SUB_ONE));
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.TRUE));
         this.writeInBufferedWriter("(END." + labelIndex + ")");
         labelIndex++;
     }
 
     private void storeTopStackValueAndPointToNext() {
         this.writeInBufferedWriter(this.codeGenerator.selectStackPointer());
-        this.writeInBufferedWriter(this.codeGenerator.decrementMemValue());
-        this.writeInBufferedWriter(this.codeGenerator.goToAddressByPointerValue());
-        this.writeInBufferedWriter(this.codeGenerator.storeMemoryRegisterToDataRegister());
-        this.writeInBufferedWriter(this.codeGenerator.clearMemoryRegister());
-        this.writeInBufferedWriter(this.codeGenerator.goToPreviousAddress());
+        this.writeInBufferedWriter(this.codeGenerator.setMemoryRegister(HackCodeGenerator.MEMORY_SUB_ONE));
+        this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.MEMORY_REGISTER));
+        this.writeInBufferedWriter(this.codeGenerator.setDataRegister(HackCodeGenerator.MEMORY_REGISTER));
+        this.writeInBufferedWriter(this.codeGenerator.setAddressRegister(HackCodeGenerator.ADDRESS_REGISTER + "-" + HackCodeGenerator.ONE));
     }
 
     private void writeInBufferedWriter(String text) {
@@ -211,6 +220,15 @@ public class HackWriter implements ICodeWriter {
             this.assemblyOutput.newLine();
         } catch (IOException e) {
             this.close();
+        }
+    }
+
+    @Override
+    public void close() {
+        try {
+            this.assemblyOutput.close();
+        } catch (IOException e) {
+            Logger.logMsg(Logger.ERROR, "Could not close writer resource");
         }
     }
 }

@@ -1,91 +1,52 @@
 package translators;
 
-public class HackCodeGenerator implements ICodeGenerator {
+import errors.SyntaxError;
 
-    @Override
+public class HackCodeGenerator {
+
+    public final static String FALSE = "0";
+    public final static String TRUE = "-1";
+    public final static String ONE = "1";
+    public final static String MINUS_ONE = TRUE;
+    public final static String DATA_REGISTER = "D";
+    public final static String ADDRESS_REGISTER = "A";
+    public final static String MEMORY_REGISTER = "M";
+    public final static String NOT = "!";
+    public final static String NOT_DATA_REGISTER = NOT + DATA_REGISTER;
+    public final static String NOT_ADDRESS_REGISTER = NOT + ADDRESS_REGISTER;
+    public final static String NOT_MEMORY_REGISTER = NOT + MEMORY_REGISTER;
+    public final static String NEGATE_DATA_REGISTER = "-" + DATA_REGISTER;
+    public final static String NEGATE_ADDRESS_REGISTER = "-" + ADDRESS_REGISTER;
+    public final static String NEGATE_MEMORY_REGISTER = "-" + MEMORY_REGISTER;
+    public final static String MEMORY_ADD_ONE = MEMORY_REGISTER + "+" + ONE;
+    public final static String MEMORY_SUB_ONE = MEMORY_REGISTER + "-" + ONE;
+    public final static String DATA_PLUS_MEMORY_REGISTERS = DATA_REGISTER + "+" + MEMORY_REGISTER;
+    public final static String ACCESSOR = "@";
+
     public String selectStackPointer() {
         return "@SP";
     }
 
-    @Override
-    public String decrementMemValue() {
-        return "M=M-1";
+    // Let's rewrite this beach
+    public String setMemoryRegister(String rightHandSide) {
+        return "M=" + rightHandSide;
     }
 
-    @Override
-    public String goToAddressByPointerValue() {
-        return "A=M";
+    public String setAddressRegister(String rightHandSide) {
+        return "A=" + rightHandSide;
     }
 
-    @Override
-    public String storeMemoryRegisterToDataRegister() {
-        return "D=M";
+    public String setDataRegister(String rightHandSide) {
+        return "D=" + rightHandSide;
     }
 
-    @Override
-    public String clearMemoryRegister() {
-        return "M=0";
+    public String advanceAddressPointer(int offset) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < offset; i++) {
+            sb.append("A=A+1").append(System.lineSeparator());
+        }
+
+        return sb.toString();
     }
-
-    @Override
-    public String goToPreviousAddress() {
-        return "A=A-1";
-    }
-
-    @Override
-    public String increaseDataRegisterWithMemoryRegister() {
-        return "D=D+M";
-    }
-
-    @Override
-    public String setMemoryRegisterToDataRegisterValue() {
-        return "M=D";
-    }
-
-    @Override
-    public String setDataRegisterToMemoryRegisterMinusDataRegister() {
-        return "D=M-D";
-    }
-
-    @Override
-    public String setMemoryRegisterToDataRegMinusMemoryReg() {
-        return "M=D-M";
-    }
-
-    @Override
-    public String setDataRegisterToAddressVal() {
-        return "D=A";
-    }
-
-    @Override
-    public String goToPreviousPointerValue() {
-        return "A=M-1";
-    }
-
-    @Override
-    public String andDataAndMemoryRegs() {
-        return "D=D&M";
-    }
-
-    @Override
-    public String orDataAndMemoryRegs() {
-        return "D=D|M";
-    }
-
-    @Override
-    public String negateMemoryRegister() {
-        return "M=!M";
-    }
-
-    @Override
-    public String setDataRegisterToDataRegisterMinusMemoryReg() {
-        return "D=D-M";
-    }
-
-    @Override
-    public String setMemoryToTrue() {
-        return "M=-1";
-    }
-
-
 }

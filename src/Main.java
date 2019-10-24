@@ -1,5 +1,6 @@
 import com.sun.media.jfxmedia.logging.Logger;
 import constants.CommandType;
+import constants.MemorySegment;
 import parsers.HackParser;
 import translators.HackCodeGenerator;
 import writers.HackWriter;
@@ -34,12 +35,29 @@ public class Main {
 
                 CommandType commandType = hackParser.getCommandType();
 
+                // Do some translations of the addresses beforehand
+                MemorySegment segment = hackParser.getArg1();
+                if (MemorySegment.TEMP.equals(segment)) {
+                    segment = MemorySegment.R5;
+                } else if (MemorySegment.POINTER.equals(segment)) {
+                    segment = MemorySegment.R3;
+                } else if (MemorySegment.STATIC.equals(segment)) {
+                    segment = MemorySegment.R16;
+                }
+
+
                 if (CommandType.isArithmeticLogicalOp(commandType)) {
                     hackWriter.writeArithmetic(commandType);
                 } else if (CommandType.POP.equals(commandType)) {
-                    hackWriter.writePop(hackParser.getArg1(), hackParser.getArg2());
+                    hackWriter.writePop(segment, hackParser.getArg2());
                 } else if (CommandType.PUSH.equals(commandType)) {
-                    hackWriter.writePush(hackParser.getArg1(), hackParser.getArg2());
+                    hackWriter.writePush(segment, hackParser.getArg2());
+                } else if (CommandType.LABEL.equals(commandType)) {
+                    hackWriter.writeLabel(hackParser.arg1);
+                } else if (CommandType.GOTO.equals(commandType)) {
+                    hackWriter.writeGoto(hackParser.arg1);
+                } else if (CommandType.IF.equals(commandType)) {
+                    hackWriter.writeConditionalGoto(hackParser.arg1);
                 }
             }
 

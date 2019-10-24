@@ -19,7 +19,7 @@ public enum CommandType {
     POP("pop"),
     LABEL("label"),
     GOTO("goto"),
-    IF("goto-if"),
+    IF("if-goto"),
     FUNCTION("function"),
     RETURN("return"),
     CALL("call"),

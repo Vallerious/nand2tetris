@@ -10,12 +10,13 @@ public enum MemorySegment {
     THAT("that"),
     TEMP("temp"),
     STATIC("static"),
+    POINTER("pointer"),
     SCREEN(""),
     KBD(""),
     R0(""),
     R1(""),
     R2(""),
-    R3(""),
+    R3("R3"),
     R4(""),
     R5("R5"),
     R6(""),
@@ -28,6 +29,7 @@ public enum MemorySegment {
     R13(""),
     R14(""),
     R15(""),
+    R16("R16"),
 
     CONSTANT("constant"),
 

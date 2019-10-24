@@ -13,7 +13,7 @@ public class HackParser implements IParser {
     protected BufferedReader reader;
 
     private String commandType;
-    private String arg1;
+    public String arg1;
     private String arg2;
 
     private boolean hasMoreCommands = true;

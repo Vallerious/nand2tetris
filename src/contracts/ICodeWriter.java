@@ -24,6 +24,12 @@ public interface ICodeWriter {
 
     void writePop(MemorySegment segment, String index);
 
+    void writeLabel(String labelName);
+
+    void writeGoto(String labelName);
+
+    void writeConditionalGoto(String labelName);
+
     /**
      * Closes the output stream.
      */
